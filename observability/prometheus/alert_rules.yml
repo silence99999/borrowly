@@ -1,0 +1,86 @@
+groups:
+  - name: microservices-alerts
+    rules:
+      - alert: RentalServiceDown
+        expr: up{job="rental-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: rental-service
+        annotations:
+          summary: "Rental service is down"
+          description: "Prometheus cannot scrape rental-service. The service may have crashed or lost DB connectivity."
+
+      - alert: RentalCreationFailureHigh
+        expr: |
+          (
+            sum(rate(rental_service_rental_creation_total{status="error"}[5m]))
+            /
+            sum(rate(rental_service_rental_creation_total[5m]))
+          ) > 0.10
+          and sum(rate(rental_service_rental_creation_total[5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: rental-service
+        annotations:
+          summary: "Rental creation failure rate is above 10%"
+          description: "More than 10% of rental creation attempts have failed over the past 5 minutes."
+
+      - alert: AuthServiceDown
+        expr: up{job="auth-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: auth-service
+        annotations:
+          summary: "Auth service is down"
+          description: "Prometheus cannot reach auth-service. Users will not be able to log in."
+
+
+      - alert: ItemServiceDown
+        expr: up{job="item-service"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          service: item-service
+        annotations:
+          summary: "Item service is down"
+          description: "The item/product service is unreachable."
+
+
+      - alert: RentalHighRequestLatency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (
+              rate(rental_service_http_request_duration_seconds_bucket[5m])
+            )
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          service: rental-service
+        annotations:
+          summary: "Rental service P95 latency above 1 second"
+          description: "The 95th-percentile response time for rental-service has exceeded 1 s for 5 minutes."
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host CPU usage above 80%"
+          description: "CPU utilisation on {{ $labels.instance }} has been above 80% for 5 minutes."
+
+      - alert: HighMemoryUsage
+        expr: |
+          (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)
+          / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host memory usage above 85%"
+          description: "Memory utilisation on {{ $labels.instance }} has been above 85% for 5 minutes."

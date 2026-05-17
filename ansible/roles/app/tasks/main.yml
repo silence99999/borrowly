@@ -1,0 +1,48 @@
+---
+- name: Ensure application directory exists
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: "0755"
+
+- name: Clone or update application repository
+  git:
+    repo: "{{ app_repo_url }}"
+    dest: "{{ app_dir }}"
+    version: "{{ app_repo_branch }}"
+    force: true
+  become_user: ubuntu
+
+- name: Copy .env file to server
+  copy:
+    src: "{{ playbook_dir }}/../.env"
+    dest: "{{ app_dir }}/.env"
+    owner: ubuntu
+    group: ubuntu
+    mode: "0600"
+
+- name: Stop existing containers (if running)
+  command: docker compose down --remove-orphans
+  args:
+    chdir: "{{ app_dir }}"
+  become_user: ubuntu
+  ignore_errors: true
+
+- name: Build and start application stack
+  command: docker compose up -d --build
+  args:
+    chdir: "{{ app_dir }}"
+  become_user: ubuntu
+  async: 1800
+  poll: 30
+
+- name: Wait for gateway health check
+  uri:
+    url: "http://localhost:{{ app_port }}/"
+    status_code: [200, 404]
+  register: health
+  retries: 12
+  delay: 10
+  until: health.status in [200, 404]

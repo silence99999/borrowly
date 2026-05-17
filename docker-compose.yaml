@@ -1,0 +1,218 @@
+services:
+  db-auth:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+      POSTGRES_DB: ${AUTH_DB_NAME}
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_pgdata:/var/lib/postgresql/data
+      - ./services/auth-service/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${AUTH_DB_USER} -d $${AUTH_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  db-items:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${ITEM_DB_USER}
+      POSTGRES_PASSWORD: ${ITEM_DB_PASSWORD}
+      POSTGRES_DB: ${ITEM_DB_NAME}
+    ports:
+      - "5434:5432"
+    volumes:
+      - item_pgdata:/var/lib/postgresql/data
+      - ./services/item-service/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${ITEM_DB_USER} -d $${ITEM_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  db-rentals:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${RENTAL_DB_USER}
+      POSTGRES_PASSWORD: ${RENTAL_DB_PASSWORD}
+      POSTGRES_DB: ${RENTAL_DB_NAME}
+    ports:
+      - "5435:5432"
+    volumes:
+      - rental_pgdata:/var/lib/postgresql/data
+      - ./services/rental-service/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${RENTAL_DB_USER} -d $${RENTAL_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  db-reviews:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${REVIEW_DB_USER}
+      POSTGRES_PASSWORD: ${REVIEW_DB_PASSWORD}
+      POSTGRES_DB: ${REVIEW_DB_NAME}
+    ports:
+      - "5436:5432"
+    volumes:
+      - review_pgdata:/var/lib/postgresql/data
+      - ./services/review-service/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${REVIEW_DB_USER} -d $${REVIEW_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  db-chat:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${CHAT_DB_USER}
+      POSTGRES_PASSWORD: ${CHAT_DB_PASSWORD}
+      POSTGRES_DB: ${CHAT_DB_NAME}
+    ports:
+      - "5437:5432"
+    volumes:
+      - chat_pgdata:/var/lib/postgresql/data
+      - ./services/chat-service/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${CHAT_DB_USER} -d $${CHAT_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_REPLACE_SERVERS_ON_STARTUP: "True"
+    volumes:
+      - ./observability/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - "5050:80"
+    depends_on:
+      - db-auth
+      - db-items
+      - db-rentals
+      - db-reviews
+      - db-chat
+    restart: unless-stopped
+
+  auth-service:
+    image: ${IMAGE_REGISTRY:-local}/rent-items-auth-service:${IMAGE_TAG:-latest}
+    build: ./services/auth-service
+    env_file: .env
+    depends_on:
+      db-auth:
+        condition: service_healthy
+    restart: unless-stopped
+
+  item-service:
+    image: ${IMAGE_REGISTRY:-local}/rent-items-item-service:${IMAGE_TAG:-latest}
+    build: ./services/item-service
+    env_file: .env
+    depends_on:
+      db-items:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+    restart: unless-stopped
+
+  rental-service:
+    image: ${IMAGE_REGISTRY:-local}/rent-items-rental-service:${IMAGE_TAG:-latest}
+    build: ./services/rental-service
+    env_file: .env
+    depends_on:
+      db-rentals:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      item-service:
+        condition: service_started
+    restart: unless-stopped
+
+  review-service:
+    image: ${IMAGE_REGISTRY:-local}/rent-items-review-service:${IMAGE_TAG:-latest}
+    build: ./services/review-service
+    env_file: .env
+    depends_on:
+      db-reviews:
+        condition: service_healthy
+    restart: unless-stopped
+
+  chat-service:
+    image: ${IMAGE_REGISTRY:-local}/rent-items-chat-service:${IMAGE_TAG:-latest}
+    build: ./services/chat-service
+    env_file: .env
+    depends_on:
+      db-chat:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway:
+    image: ${IMAGE_REGISTRY:-local}/rent-items-gateway:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - auth-service
+      - item-service
+      - rental-service
+      - review-service
+      - chat-service
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+
+volumes:
+  auth_pgdata:
+  item_pgdata:
+  rental_pgdata:
+  review_pgdata:
+  chat_pgdata:
+  uploads_data:
+  grafana_data:

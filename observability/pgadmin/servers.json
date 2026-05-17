@@ -1,0 +1,9 @@
+{
+  "Servers": {
+    "1": { "Name": "auth-db",   "Group": "Servers", "Host": "db-auth",    "Port": 5432, "MaintenanceDB": "auth_db",   "Username": "auth_user",   "SSLMode": "prefer" },
+    "2": { "Name": "item-db",   "Group": "Servers", "Host": "db-items",   "Port": 5432, "MaintenanceDB": "item_db",   "Username": "item_user",   "SSLMode": "prefer" },
+    "3": { "Name": "rental-db", "Group": "Servers", "Host": "db-rentals", "Port": 5432, "MaintenanceDB": "rental_db", "Username": "rental_user", "SSLMode": "prefer" },
+    "4": { "Name": "review-db", "Group": "Servers", "Host": "db-reviews", "Port": 5432, "MaintenanceDB": "review_db", "Username": "review_user", "SSLMode": "prefer" },
+    "5": { "Name": "chat-db",   "Group": "Servers", "Host": "db-chat",    "Port": 5432, "MaintenanceDB": "chat_db",   "Username": "chat_user",   "SSLMode": "prefer" }
+  }
+}

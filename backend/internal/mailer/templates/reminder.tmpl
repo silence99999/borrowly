@@ -1,0 +1,48 @@
+{{define "subject"}}
+Rental ending soon: {{.ItemTitle}}
+{{end}}
+
+{{define "plainBody"}}
+Hello,
+
+This is a reminder that your rental of "{{.ItemTitle}}" will end at:
+
+{{.EndAt | formatTime}}
+
+Please make sure to return the item on time to avoid additional charges.
+
+Thank you for using our service.
+{{end}}
+
+{{define "htmlBody"}}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rental ending soon</title>
+</head>
+<body style="font-family: Arial, sans-serif; color: #333;">
+    <h2>Rental ending soon </h2>
+
+    <p>
+        This is a reminder that your rental of
+        <strong>{{.ItemTitle}}</strong>
+        will end at:
+    </p>
+
+    <p style="font-size: 16px;">
+        <strong>{{.EndAt | formatTime}}</strong>
+    </p>
+
+    <p>
+        Please make sure to return the item on time to avoid additional charges.
+    </p>
+
+    <hr>
+
+    <p style="font-size: 12px; color: #777;">
+        This is an automated message. Please do not reply.
+    </p>
+</body>
+</html>
+{{end}}

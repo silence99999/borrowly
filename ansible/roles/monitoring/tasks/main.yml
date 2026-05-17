@@ -1,0 +1,42 @@
+---
+- name: Verify Prometheus is reachable
+  uri:
+    url: "http://localhost:{{ prometheus_port }}/-/ready"
+    status_code: 200
+  register: prom_health
+  retries: 6
+  delay: 10
+  until: prom_health.status == 200
+  ignore_errors: true
+
+- name: Print Prometheus health status
+  debug:
+    msg: "Prometheus ready: {{ prom_health.status | default('unreachable') }}"
+
+- name: Verify Grafana is reachable
+  uri:
+    url: "http://localhost:{{ grafana_port }}/api/health"
+    status_code: 200
+  register: grafana_health
+  retries: 6
+  delay: 10
+  until: grafana_health.status == 200
+  ignore_errors: true
+
+- name: Print Grafana health status
+  debug:
+    msg: "Grafana ready: {{ grafana_health.status | default('unreachable') }}"
+
+- name: Verify Alertmanager is reachable
+  uri:
+    url: "http://localhost:{{ alertmanager_port }}/-/ready"
+    status_code: 200
+  register: am_health
+  retries: 6
+  delay: 10
+  until: am_health.status == 200
+  ignore_errors: true
+
+- name: Print Alertmanager health status
+  debug:
+    msg: "Alertmanager ready: {{ am_health.status | default('unreachable') }}"

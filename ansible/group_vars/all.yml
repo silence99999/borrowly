@@ -1,0 +1,10 @@
+---
+app_repo_url: "https://github.com/silence99999/borrowly"
+app_repo_branch: "main"
+app_dir: "/opt/borrowly"
+docker_compose_version: "v2.27.0"
+
+grafana_port: 3000
+prometheus_port: 9090
+alertmanager_port: 9093
+app_port: 8080
