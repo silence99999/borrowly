@@ -38,3 +38,30 @@ variable "disk_size_gb" {
   type        = number
   default     = 20
 }
+
+variable "admin_cidr_blocks" {
+  description = "CIDR blocks allowed to access SSH, Prometheus, and Grafana (restrict to your IP)"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "github_actions_cidr_blocks" {
+  description = "GitHub Actions IP ranges allowed to SSH for deployment"
+  type        = list(string)
+  # Current GitHub Actions IP ranges - update if deployments start timing out
+  # Source: https://api.github.com/meta (actions key)
+  default = [
+    "4.148.0.0/16",
+    "20.1.0.0/16",
+    "20.7.0.0/16",
+    "20.232.0.0/16",
+    "20.248.0.0/16",
+    "4.175.0.0/16",
+    "20.105.0.0/16",
+    "20.200.0.0/16",
+    "20.201.0.0/16",
+    "20.205.0.0/16",
+    "20.207.0.0/16",
+    "20.233.0.0/16"
+  ]
+}

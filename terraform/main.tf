@@ -17,11 +17,19 @@ resource "aws_security_group" "app_sg" {
   description = "Allow HTTP, Grafana, Prometheus, and SSH inbound traffic"
 
   ingress {
-    description = "SSH"
+    description = "SSH - admin access"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.admin_cidr_blocks
+  }
+
+  ingress {
+    description = "SSH - GitHub Actions"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = var.github_actions_cidr_blocks
   }
 
   ingress {
@@ -45,7 +53,7 @@ resource "aws_security_group" "app_sg" {
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.admin_cidr_blocks
   }
 
   ingress {
@@ -53,7 +61,7 @@ resource "aws_security_group" "app_sg" {
     from_port   = 9090
     to_port     = 9090
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.admin_cidr_blocks
   }
 
   egress {
